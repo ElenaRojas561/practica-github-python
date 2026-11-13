@@ -63,14 +63,55 @@ def main():
     print("Revisa logs/sistema.log para el registro completo."); print("="*60)
 if __name__=="__main__": main()
 
-# Compañeros, explico que hice en el Software FJ para que puedas entender y continuar con el proceso:
+    """Clase abstracta: toda entidad tiene id y debe validarse/describirse."""
+    def __init__(self, id_entidad):
+        if not id_entidad: raise ParametroFaltanteError("El id es obligatorio.")
+        self._id = str(id_entidad)
+    @property
+    def id(self): return self._id
+    @abstractmethod
+    def validar(self): pass
+    @abstractmethod
+    def describir(self) -> str: pass
+    def __str__(self): return self.describir()
 
-QUE SI ESTA HECHO:
-- main.py ya esta completo con las 16 operaciones que pidio el profe.
-- entidades.py (Cliente), servicios.py (Sala, Equipo, Asesoria), gestor.py, excepciones.py y logger.py ya estan creados.
-- Funciona: registrar clientes, crear servicios, crear reservas con descuento segun tipo de cliente (premium 15%, corporativo 10%), controlar stock, cancelar reservas y calcular costo / impuesto / descuento.
-
-POR QUE SALEN ERRORES (Y ES NORMAL POR AHORA):
-- Las operaciones 3, 4, 8, 11, 12 y 13 salen como "Capturada y controlada" a proposito. Son pruebas de error: email malo, cliente duplicado, precio negativo, cliente que no existe, stock insuficiente y servicio no disponible.
-- La app NO se cae, eso es lo que el profe quiere demostrar con try/except. El mensaje "La app SIGUE funcionando" significa que el manejo de excepciones esta bien.
-- Si te sale algun otro error raro, es porque falta la otra parte del complemento que todavia no hemos pegado / conectado. No es que el codigo este danado, es que main.py necesita todos los archivos juntos en la misma carpeta para correr. Si falta uno, Python no lo encuentra y marca error.
+class Cliente(Entidad):
+    """Encapsulación: atributos privados con properties validadas."""
+    def __init__(self, id_cliente, nombre, email, telefono, tipo="regular"):
+        super().__init__(id_cliente)
+        self.nombre = nombre; self.email = email; self.telefono = telefono; self.tipo = tipo
+        self.validar()
+    @property
+    def nombre(self): return self._nombre
+    @nombre.setter
+    def nombre(self, v):
+        if not v or len(str(v).strip()) < 3: raise DatoInvalidoError("Nombre debe tener >=3 caracteres.")
+        self._nombre = str(v).strip().title()
+    @property
+    def email(self): return self._email
+    @email.setter
+    def email(self, v):
+        if not v or not re.match(r"^[\w\.-]+@[\w\.-]+\.\w+$", str(v)):
+            raise DatoInvalidoError(f"Email inválido: {v}")
+        self._email = str(v).lower()
+    @property
+    def telefono(self): return self._telefono
+    @telefono.setter
+    def telefono(self, v):
+        d = re.sub(r"\D", "", str(v or ""))
+        if len(d) < 7: raise DatoInvalidoError("Teléfono debe tener >=7 dígitos.")
+        self._telefono = d
+    @property
+    def tipo(self): return self._tipo
+    @tipo.setter
+    def tipo(self, v):
+        v = str(v or "regular").lower()
+        if v not in ("regular","premium","corporativo"): raise DatoInvalidoError("Tipo debe ser regular/premium/corporativo.")
+        self._tipo = v
+    def validar(self):
+        # Re-valida vía setters
+        self.nombre=self._nombre; self.email=self._email; self.telefono=self._telefono; self.tipo=self._tipo
+    def describir(self):
+        return f"Cliente[{self.id}] {self.nombre} | {self.email} | {self.telefono} | {self.tipo}"
+    def descuento_base(self):
+        return {"regular":0.0,"premium":0.10,"corporativo":0.15}[self.tipo]
