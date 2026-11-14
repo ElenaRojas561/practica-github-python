@@ -115,3 +115,76 @@ class Cliente(Entidad):
         return f"Cliente[{self.id}] {self.nombre} | {self.email} | {self.telefono} | {self.tipo}"
     def descuento_base(self):
         return {"regular":0.0,"premium":0.10,"corporativo":0.15}[self.tipo]
+
+"""Servicio abstracto + 3 servicios especializados. Polimorfismo + sobrecarga simulada."""
+from abc import ABC, abstractmethod
+from excepciones import *
+
+class Servicio(ABC):
+    def __init__(self, codigo, nombre, precio_base, disponible=True):
+        if not codigo or not nombre: raise ParametroFaltanteError("Servicio requiere código y nombre.")
+        if precio_base is None or precio_base < 0: raise DatoInvalidoError("Precio base no puede ser negativo.")
+        self.codigo=str(codigo); self.nombre=nombre; self.precio_base=float(precio_base); self.disponible=bool(disponible)
+    @abstractmethod
+    def calcular_costo(self, duracion=1, **kwargs) -> float: pass
+    @abstractmethod
+    def describir(self) -> str: pass
+    @abstractmethod
+    def validar_parametros(self, duracion, **kwargs): pass
+    # --- MÉTODOS SOBRECARGADOS (variantes por parámetros) ---
+    def calcular_costo_con_impuesto(self, duracion=1, impuesto=0.19, **kwargs):
+        """Variante 1: costo + impuesto."""
+        try:
+            base = self.calcular_costo(duracion, **kwargs)
+            if impuesto < 0: raise CalculoInconsistenteError("Impuesto no puede ser negativo.")
+            return round(base*(1+impuesto),2)
+        except ErrorSoftwareFJ as e: raise CalculoInconsistenteError(f"Error al calcular con impuesto en {self.codigo}") from e
+    def calcular_costo_con_descuento(self, duracion=1, descuento=0.0, impuesto=0.0, **kwargs):
+        """Variante 2: costo - descuento + impuesto opcional."""
+        try:
+            if not 0 <= descuento <= 0.5: raise CalculoInconsistenteError("Descuento debe estar entre 0 y 50%.")
+            base = self.calcular_costo(duracion, **kwargs)
+            total = base*(1-descuento)*(1+impuesto)
+            if total < 0: raise CalculoInconsistenteError("Total calculado negativo.")
+            return round(total,2)
+        except ErrorSoftwareFJ as e: raise CalculoInconsistenteError("Fallo en cálculo con descuento") from e
+    def verificar_disponibilidad(self):
+        if not self.disponible: raise ServicioNoDisponibleError(f"Servicio {self.codigo} - {self.nombre} no disponible.")
+        return True
+
+class ReservaSala(Servicio):
+    def __init__(self, codigo, nombre, precio_base, capacidad, incluye_video_beam=False, **kw):
+        super().__init__(codigo,nombre,precio_base,**kw); self.capacidad=capacidad; self.incluye_video_beam=incluye_video_beam; self.validar_parametros(1, capacidad=capacidad)
+    def validar_parametros(self, duracion, **kw):
+        if duracion is None or duracion<=0: raise ReservaInvalidaError("Duración de sala debe ser >0 horas.")
+        cap=kw.get("capacidad", getattr(self,"capacidad",0))
+        if cap<=0 or cap>200: raise DatoInvalidoError("Capacidad debe ser 1-200.")
+    def calcular_costo(self, duracion=1, **kw):
+        self.validar_parametros(duracion, capacidad=self.capacidad)
+        extra = 25000 if self.incluye_video_beam else 0
+        return round((self.precio_base*duracion)+extra,2)
+    def describir(self): return f"Sala[{self.codigo}] {self.nombre} | Cap:{self.capacidad} | Beam:{'Sí' if self.incluye_video_beam else 'No'} | ${self.precio_base:,.0f}/h"
+
+class AlquilerEquipo(Servicio):
+    def __init__(self, codigo, nombre, precio_base, cantidad_stock, dias_minimos=1, **kw):
+        super().__init__(codigo,nombre,precio_base,**kw); self.cantidad_stock=cantidad_stock; self.dias_minimos=dias_minimos
+    def validar_parametros(self, duracion, **kw):
+        if duracion<self.dias_minimos: raise ReservaInvalidaError(f"Mínimo {self.dias_minimos} día(s).")
+        if kw.get("cantidad",1)>self.cantidad_stock: raise ServicioNoDisponibleError(f"Stock insuficiente: hay {self.cantidad_stock}.")
+        if kw.get("cantidad",1)<=0: raise DatoInvalidoError("Cantidad debe ser >0.")
+    def calcular_costo(self, duracion=1, **kw):
+        cantidad=kw.get("cantidad",1); self.validar_parametros(duracion, cantidad=cantidad)
+        return round(self.precio_base*duracion*cantidad,2)
+    def describir(self): return f"Equipo[{self.codigo}] {self.nombre} | Stock:{self.cantidad_stock} | ${self.precio_base:,.0f}/día"
+
+class AsesoriaEspecializada(Servicio):
+    NIVELES={"basica":1.0,"avanzada":1.5,"experta":2.0}
+    def __init__(self, codigo, nombre, precio_base, nivel="basica", consultor="Sin asignar", **kw):
+        super().__init__(codigo,nombre,precio_base,**kw); self.nivel=str(nivel).lower(); self.consultor=consultor
+        if self.nivel not in self.NIVELES: raise DatoInvalidoError("Nivel: basica/avanzada/experta.")
+    def validar_parametros(self, duracion, **kw):
+        if duracion<=0 or duracion>8: raise ReservaInvalidaError("Asesoría: duración 1-8 horas por sesión.")
+    def calcular_costo(self, duracion=1, **kw):
+        self.validar_parametros(duracion)
+        return round(self.precio_base*duracion*self.NIVELES[self.nivel],2)
+    def describir(self): return f"Asesoría[{self.codigo}] {self.nombre} | Nivel:{self.nivel} | Consultor:{self.consultor} | ${self.precio_base:,.0f}/h base"
