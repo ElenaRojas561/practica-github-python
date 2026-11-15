@@ -13,7 +13,7 @@ from enum import Enum
 
 #Inicio
 
-class Cliente():
+class Cliente(ABC):
 
 ##Encapsulación: atributos privados con properties validadas.
 
