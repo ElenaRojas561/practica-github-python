@@ -188,3 +188,124 @@ class AsesoriaEspecializada(Servicio):
         self.validar_parametros(duracion)
         return round(self.precio_base*duracion*self.NIVELES[self.nivel],2)
     def describir(self): return f"Asesoría[{self.codigo}] {self.nombre} | Nivel:{self.nivel} | Consultor:{self.consultor} | ${self.precio_base:,.0f}/h base"
+
+"""Reserva: integra Cliente + Servicio, estados, confirmación/cancelación."""
+from excepciones import *
+from enum import Enum
+class EstadoReserva(Enum): PENDIENTE="Pendiente"; CONFIRMADA="Confirmada"; CANCELADA="Cancelada"; COMPLETADA="Completada"
+class Reserva:
+    _contador=0
+    def __init__(self, cliente, servicio, duracion, **params):
+        if cliente is None or servicio is None: raise ParametroFaltanteError("Reserva requiere cliente y servicio.")
+        if duracion is None: raise ParametroFaltanteError("Reserva requiere duración.")
+        Reserva._contador+=1; self.id=f"R-{Reserva._contador:03d}"
+        self.cliente=cliente; self.servicio=servicio; self.duracion=duracion; self.params=params
+        self.estado=EstadoReserva.PENDIENTE; self.total=None
+    def procesar(self):
+        """try/except/else/finally + encadenamiento."""
+        try:
+            self.servicio.verificar_disponibilidad()
+            self.servicio.validar_parametros(self.duracion, **self.params)
+            # Polimorfismo: cada servicio calcula a su manera, con descuento del cliente
+            self.total = self.servicio.calcular_costo_con_descuento(self.duracion, descuento=self.cliente.descuento_base(), **self.params)
+        except ErrorSoftwareFJ as e:
+            self.estado=EstadoReserva.CANCELADA
+            raise ReservaInvalidaError(f"Reserva {self.id} falló: {e}") from e
+        else:
+            self.estado=EstadoReserva.CONFIRMADA
+            return self.total
+        finally:
+            pass # el log lo hace el gestor; finally demuestra que siempre se ejecuta
+    def confirmar(self):
+        if self.estado!=EstadoReserva.PENDIENTE: raise OperacionNoPermitidaError(f"No se puede confirmar reserva en estado {self.estado.value}.")
+        return self.procesar()
+    def cancelar(self):
+        if self.estado==EstadoReserva.CANCELADA: raise OperacionNoPermitidaError("La reserva ya está cancelada.")
+        if self.estado==EstadoReserva.COMPLETADA: raise OperacionNoPermitidaError("No se puede cancelar una reserva completada.")
+        self.estado=EstadoReserva.CANCELADA; return True
+    def completar(self):
+        if self.estado!=EstadoReserva.CONFIRMADA: raise OperacionNoPermitidaError("Solo se completa una reserva confirmada.")
+        self.estado=EstadoReserva.COMPLETADA; return True
+    def describir(self): return f"{self.id} | {self.cliente.nombre} -> {self.servicio.nombre} | Dur:{self.duracion} | {self.estado.value} | Total:${self.total if self.total is not None else '-'}"
+
+"""Gestor: listas internas, sin BD. Orquesta todo y nunca deja caer la app."""
+from excepciones import *
+import logger
+class GestorSoftwareFJ:
+    def __init__(self):
+        self.clientes=[]; self.servicios=[]; self.reservas=[]
+    # Clientes
+    def registrar_cliente(self, cliente):
+        try:
+            if any(c.id==cliente.id or c.email==cliente.email for c in self.clientes):
+                raise ClienteDuplicadoError(f"Cliente duplicado id/email: {cliente.id}/{cliente.email}")
+            self.clientes.append(cliente)
+        except ErrorSoftwareFJ as e:
+            logger.error(f"Registrar cliente: {e}"); raise
+        else: logger.info(f"Cliente registrado: {cliente.describir()}")
+        finally: logger.info("Intento de registro de cliente finalizado.")
+        return cliente
+    def buscar_cliente(self, id_cliente):
+        for c in self.clientes:
+            if c.id==id_cliente: return c
+        raise ClienteNoEncontradoError(f"No existe cliente {id_cliente}")
+    # Servicios
+    def agregar_servicio(self, servicio):
+        try:
+            if any(s.codigo==servicio.codigo for s in self.servicios): raise DatoInvalidoError(f"Código duplicado {servicio.codigo}")
+            self.servicios.append(servicio)
+        except ErrorSoftwareFJ as e: logger.error(f"Agregar servicio: {e}"); raise
+        else: logger.info(f"Servicio agregado: {servicio.describir()}")
+        return servicio
+    def buscar_servicio(self, codigo):
+        for s in self.servicios:
+            if s.codigo==codigo: return s
+        raise ServicioNoDisponibleError(f"No existe servicio {codigo}")
+    # Reservas
+    def crear_reserva(self, id_cliente, codigo_servicio, duracion, **params):
+        try:
+            cliente=self.buscar_cliente(id_cliente); servicio=self.buscar_servicio(codigo_servicio)
+            from reservas import Reserva
+            r=Reserva(cliente, servicio, duracion, **params); total=r.procesar(); self.reservas.append(r)
+        except ErrorSoftwareFJ as e:
+            logger.error(f"Crear reserva ({id_cliente}/{codigo_servicio}): {e} | Causa: {e.__cause__}")
+            return None
+        else: logger.info(f"Reserva creada: {r.describir()}"); return r
+        finally: logger.info("Intento de reserva finalizado.")
+    def listar(self):
+        print("\n--- CLIENTES ---"); [print(" ",c.describir()) for c in self.clientes] or print("  (sin clientes)")
+        print("--- SERVICIOS ---"); [print(" ",s.describir()) for s in self.servicios] or print("  (sin servicios)")
+        print("--- RESERVAS ---"); [print(" ",r.describir()) for r in self.reservas] or print("  (sin reservas)")
+
+"""Excepciones personalizadas de Software FJ."""
+class ErrorSoftwareFJ(Exception):
+    """Base de todas las excepciones del sistema."""
+    pass
+class DatoInvalidoError(ErrorSoftwareFJ):
+    pass
+class ParametroFaltanteError(ErrorSoftwareFJ):
+    pass
+class OperacionNoPermitidaError(ErrorSoftwareFJ):
+    pass
+class ServicioNoDisponibleError(ErrorSoftwareFJ):
+    pass
+class ReservaInvalidaError(ErrorSoftwareFJ):
+    pass
+class CalculoInconsistenteError(ErrorSoftwareFJ):
+    pass
+class ClienteDuplicadoError(ErrorSoftwareFJ):
+    pass
+class ClienteNoEncontradoError(ErrorSoftwareFJ):
+    pass
+
+"""Logger: registra eventos y errores en logs/sistema.log sin detener la app."""
+import logging, os
+LOG_PATH = os.path.join(os.path.dirname(__file__), "logs", "sistema.log")
+os.makedirs(os.path.dirname(LOG_PATH), exist_ok=True)
+logging.basicConfig(filename=LOG_PATH, level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(message)s", datefmt="%Y-%m-%d %H:%M:%S", encoding="utf-8")
+logger = logging.getLogger("SoftwareFJ")
+def info(msg): logger.info(msg); print(f"[INFO] {msg}")
+def error(msg): logger.error(msg); print(f"[ERROR] {msg}")
+def advertencia(msg): logger.warning(msg); print(f"[WARN] {msg}")
+    
