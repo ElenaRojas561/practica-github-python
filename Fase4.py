@@ -8,14 +8,17 @@ from excepciones import *
 Los modulos en este comentario previamente se importaban de librerias personalizadas, pero fueron incorporados a este codigo
 """
 
+
+import logging, os
 from abc import ABC, abstractmethod
 from enum import Enum
+from excepciones import *
 
 #Inicio
 
 class Cliente(ABC):
 
-##Encapsulación: atributos privados con properties validadas.
+##Encapsulación: atributos con properties validadas.
 
     def __init__(self, id_cliente, nombre, email, telefono, tipo="regular"):
         super().__init__(id_cliente)
@@ -68,11 +71,31 @@ class Cliente(ABC):
     
     def descuento_base(self):
         return {"regular":0.0,"premium":0.10,"corporativo":0.15}[self.tipo]
-    
+
+
+##Operación con manejo de excepciones y logging
+
+def operacion(n, titulo, fn):
+
+    print(f"\n{'='*60}\nOPERACIÓN {n}: {titulo}")
+
+    try: return fn()
+
+    except Exception as e:
+
+        logger.error(f"Op {n} - {titulo}: {type(e).__name__}: {e}")
+
+        print(f"  -> Capturada y controlada: {e} | La app SIGUE funcionando.")
+
+        return None
+
+##Inicio de la aplicación
 
 def main():
 
-    print("="*60); print("  SOFTWARE FJ - Gestión de Clientes, Servicios y Reservas"); print("  Sin BD | POO + Excepciones | Logs en logs/sistema.log"); print("="*60)
+    print("="*60)
+    print("\nSOFTWARE FJ - Gestión de Clientes, Servicios y Reservas")
+    #print("  Sin BD | POO + Excepciones | Logs en logs/sistema.log") | Comentario generado por IA, se sobreentiende que el programa cumple con estas características.
     g = GestorSoftwareFJ()
     
     # 1-2 Clientes válidos
@@ -146,58 +169,6 @@ def main():
     print(f"\nTotal clientes: {len(g.clientes)} | Servicios: {len(g.servicios)} | Reservas: {len(g.reservas)}")
     print("Revisa logs/sistema.log para el registro completo."); print("="*60)
 
-
-
-
-
-
-
-##Reserva
-
-class EstadoReserva(Enum): PENDIENTE="Pendiente"; CONFIRMADA="Confirmada"; CANCELADA="Cancelada"; COMPLETADA="Completada"
-
-class Reserva:
-    _contador=0
-    def __init__(self, cliente, servicio, duracion, **params):
-        if cliente is None or servicio is None: raise ParametroFaltanteError("Reserva requiere cliente y servicio.")
-        if duracion is None: raise ParametroFaltanteError("Reserva requiere duración.")
-        Reserva._contador+=1; self.id=f"R-{Reserva._contador:03d}"
-        self.cliente=cliente; self.servicio=servicio; self.duracion=duracion; self.params=params
-        self.estado=EstadoReserva.PENDIENTE; self.total=None
-    
-    def procesar(self):
-
-        """try/except/else/finally + encadenamiento."""
-        try:
-            self.servicio.verificar_disponibilidad()
-            self.servicio.validar_parametros(self.duracion, **self.params)
-            # Polimorfismo: cada servicio calcula a su manera, con descuento del cliente
-            self.total = self.servicio.calcular_costo_con_descuento(self.duracion, descuento=self.cliente.descuento_base(), **self.params)
-        except ErrorSoftwareFJ as e:
-            self.estado=EstadoReserva.CANCELADA
-            raise ReservaInvalidaError(f"Reserva {self.id} falló: {e}") from e
-        else:
-            self.estado=EstadoReserva.CONFIRMADA
-            return self.total
-        finally:
-            pass # el log lo hace el gestor; finally demuestra que siempre se ejecuta
-    
-    def confirmar(self):
-        if self.estado!=EstadoReserva.PENDIENTE: raise OperacionNoPermitidaError(f"No se puede confirmar reserva en estado {self.estado.value}.")
-        return self.procesar()
-    
-    def cancelar(self):
-        if self.estado==EstadoReserva.CANCELADA: raise OperacionNoPermitidaError("La reserva ya está cancelada.")
-        if self.estado==EstadoReserva.COMPLETADA: raise OperacionNoPermitidaError("No se puede cancelar una reserva completada.")
-        self.estado=EstadoReserva.CANCELADA; return True
-    
-    def completar(self):
-        if self.estado!=EstadoReserva.CONFIRMADA: raise OperacionNoPermitidaError("Solo se completa una reserva confirmada.")
-        self.estado=EstadoReserva.COMPLETADA; return True
-    
-    def describir(self): return f"{self.id} | {self.cliente.nombre} -> {self.servicio.nombre} | Dur:{self.duracion} | {self.estado.value} | Total:${self.total if self.total is not None else '-'}"
-
-
 ##Gestor
 
 class GestorSoftwareFJ:
@@ -239,23 +210,82 @@ class GestorSoftwareFJ:
 
     # Reservas
     def crear_reserva(self, id_cliente, codigo_servicio, duracion, **params):
+        
         try:
             cliente=self.buscar_cliente(id_cliente); servicio=self.buscar_servicio(codigo_servicio)
             from reservas import Reserva
             r=Reserva(cliente, servicio, duracion, **params); total=r.procesar(); self.reservas.append(r)
+       
         except ErrorSoftwareFJ as e:
             logger.error(f"Crear reserva ({id_cliente}/{codigo_servicio}): {e} | Causa: {e.__cause__}")
             return None
+        
         else: logger.info(f"Reserva creada: {r.describir()}"); return r
+        
         finally: logger.info("Intento de reserva finalizado.")
+
+##Estados de la reserva
+
+class EstadoReserva(Enum): 
+
+    PENDIENTE="Pendiente"
+    CONFIRMADA="Confirmada"
+    CANCELADA="Cancelada"
+    COMPLETADA="Completada"
+
+class Reserva:
+
+    _contador=0
+
+    def __init__(self, cliente, servicio, duracion, **params):
+        if cliente is None or servicio is None: raise ParametroFaltanteError("Reserva requiere cliente y servicio.")
+        if duracion is None: raise ParametroFaltanteError("Reserva requiere duración.")
+        Reserva._contador+=1; self.id=f"R-{Reserva._contador:03d}"
+        self.cliente=cliente; self.servicio=servicio; self.duracion=duracion; self.params=params
+        self.estado=EstadoReserva.PENDIENTE; self.total=None
+    
+    def procesar(self):
+
+        """try/except/else/finally + encadenamiento."""
+        try:
+            self.servicio.verificar_disponibilidad()
+            self.servicio.validar_parametros(self.duracion, **self.params)
+            # Polimorfismo: cada servicio calcula a su manera, con descuento del cliente
+            self.total = self.servicio.calcular_costo_con_descuento(self.duracion, descuento=self.cliente.descuento_base(), **self.params)
+        except ErrorSoftwareFJ as e:
+            self.estado=EstadoReserva.CANCELADA
+            raise ReservaInvalidaError(f"Reserva {self.id} falló: {e}") from e
+        else:
+            self.estado=EstadoReserva.CONFIRMADA
+            return self.total
+        finally:
+            pass # el log lo hace el gestor; finally demuestra que siempre se ejecuta
+    
+    def confirmar(self):
+        if self.estado!=EstadoReserva.PENDIENTE: raise OperacionNoPermitidaError(f"No se puede confirmar reserva en estado {self.estado.value}.")
+        return self.procesar()
+    
+    def cancelar(self):
+        if self.estado==EstadoReserva.CANCELADA: raise OperacionNoPermitidaError("La reserva ya está cancelada.")
+        if self.estado==EstadoReserva.COMPLETADA: raise OperacionNoPermitidaError("No se puede cancelar una reserva completada.")
+
+        self.estado=EstadoReserva.CANCELADA
+        return True
+    
+    def completar(self):
+        if self.estado!=EstadoReserva.CONFIRMADA: raise OperacionNoPermitidaError("Solo se completa una reserva confirmada.")
+       
+        self.estado=EstadoReserva.COMPLETADA 
+        return True
+    
+    def describir(self): return f"{self.id} | {self.cliente.nombre} -> {self.servicio.nombre} | Dur:{self.duracion} | {self.estado.value} | Total:${self.total if self.total is not None else '-'}"
+
     def listar(self):
         print("\n--- CLIENTES ---"); [print(" ",c.describir()) for c in self.clientes] or print("  (sin clientes)")
         print("--- SERVICIOS ---"); [print(" ",s.describir()) for s in self.servicios] or print("  (sin servicios)")
         print("--- RESERVAS ---"); [print(" ",r.describir()) for r in self.reservas] or print("  (sin reservas)")
 
-##Logger: registra eventos y errores en logs/sistema.log sin detener la app.
-
-import logging, os
+##Logger: registra eventos y errores 
 
 LOG_PATH = os.path.join(os.path.dirname(__file__), "logs", "sistema.log")
 
@@ -269,46 +299,6 @@ logger = logging.getLogger("SoftwareFJ")
 def info(msg): logger.info(msg); print(f"[INFO] {msg}")
 def error(msg): logger.error(msg); print(f"[ERROR] {msg}")
 def advertencia(msg): logger.warning(msg); print(f"[WARN] {msg}")
-
-##Excepciones personalizadas de Software FJ
-
-class ErrorSoftwareFJ(Exception):
-    #Base de todas las excepciones del sistema
-    pass
-
-class DatoInvalidoError(ErrorSoftwareFJ):
-    pass
-
-class ParametroFaltanteError(ErrorSoftwareFJ):
-    pass
-
-class OperacionNoPermitidaError(ErrorSoftwareFJ):
-    pass
-
-class ServicioNoDisponibleError(ErrorSoftwareFJ):
-    pass
-
-class ReservaInvalidaError(ErrorSoftwareFJ):
-    pass
-
-class CalculoInconsistenteError(ErrorSoftwareFJ):
-    pass
-
-class ClienteDuplicadoError(ErrorSoftwareFJ):
-    pass
-
-class ClienteNoEncontradoError(ErrorSoftwareFJ):
-    pass
-
-
-def operacion(n, titulo, fn):
-    print(f"\n{'='*60}\nOPERACIÓN {n}: {titulo}")
-    try: return fn()
-    except Exception as e:
-        logger.error(f"Op {n} - {titulo}: {type(e).__name__}: {e}")
-        print(f"  -> Capturada y controlada: {e} | La app SIGUE funcionando.")
-        return None
-
 
 ##Clases abstracta: toda entidad tiene id y debe validarse/describirse
 
@@ -422,5 +412,7 @@ class AsesoriaEspecializada(Servicio):
         return round(self.precio_base*duracion*self.NIVELES[self.nivel],2)
     
     def describir(self): return f"Asesoría[{self.codigo}] {self.nombre} | Nivel:{self.nivel} | Consultor:{self.consultor} | ${self.precio_base:,.0f}/h base"
+
+main()    
 
 
