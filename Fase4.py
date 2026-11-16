@@ -15,11 +15,145 @@ import re
 
 from excepciones import *
 
+# Configuración básica de logging
+
+##Logger: registra eventos y errores 
+
+LOG_PATH = os.path.join(os.path.dirname(__file__), "logs", "sistema.log")
+
+os.makedirs(os.path.dirname(LOG_PATH), exist_ok=True)
+
+logging.basicConfig(filename=LOG_PATH, level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(message)s", datefmt="%Y-%m-%d %H:%M:%S", encoding="utf-8")
+
+logger = logging.getLogger("SoftwareFJ")
+
+def info(msg): 
+    logger.info(msg); print(f"[INFO] {msg}")
+def error(msg): 
+    logger.error(msg); print(f"[ERROR] {msg}")
+def advertencia(msg): 
+    logger.warning(msg); print(f"[WARN] {msg}")
+
+def ejecutar_operacion(titulo, fn=None):
+  
+  print(f"\n{'-'*60}\nEjecutando: {titulo}")
+  
+  if fn is None:
+    
+    print("  -> [Función pendiente de implementar]")
+    return None
+  
+  try:
+    return fn()
+  
+  except Exception as e:
+    logger.error(f"{titulo}: {type(e).__name__}: {e}")
+    print(f"Capturada y controlada: {e} | La app SIGUE funcionando.")
+    return None
+
+def mostrar_menu(titulo, opciones, es_principal=False):
+  
+  texto_salida = "Salir de la aplicación" if es_principal else "Regresar"
+
+  while True:
+    print(f"\n{'='*60}")
+    print(f"{titulo}")
+    print(f"{'='*60}")
+
+    for clave, (descripcion,_) in opciones.items():
+      print(f"  {clave}. {descripcion}")
+    print(f"  0. {texto_salida}")
+
+    seleccion = input("\nSeleccione una opción: ").strip()
+
+    if seleccion == "0":
+      if es_principal:
+        print("Has salido de la aplicación.")
+      break  
+
+    if seleccion in opciones:
+      descripcion, accion = opciones[seleccion]
+      accion()  # Ejecuta el submenú
+       
+    else:
+      print("\n[!] Opción no válida. Intenta nuevamente.")
+
+## Submenús
+
+def menu_clientes():
+  opciones = {
+      "1": (
+          "Registrar cliente (premium)",
+          lambda: ejecutar_operacion("Registro Premium"),
+      ),
+      "2": (
+          "Registrar cliente (corporativo)",
+          lambda: ejecutar_operacion("Registro Corporativo"),
+      ),
+      "3":(
+          "Actualización de información",
+          lambda: ejecutar_operacion("Actualización de información"),
+      ),
+      "4": (
+          "Eliminar cliente",
+          lambda: ejecutar_operacion("Eliminar cliente")
+      ),
+  }
+  mostrar_menu("GESTIÓN DE CLIENTES", opciones)
+
+def menu_salas():
+  opciones = {
+      "1": ("Reservar Sala", lambda: ejecutar_operacion("Reservar Sala")),
+      "2": (
+          "Gestionar Reserva",
+          lambda: ejecutar_operacion("Gestionar Reserva"),
+      ),
+  }
+  mostrar_menu("RESERVA DE SALAS", opciones)
+
+def menu_equipos():
+  opciones = {
+      "1": ("Alquilar equipo", lambda: ejecutar_operacion("Alquilar equipo")),
+      "2": (
+          "Gestionar equipo alquilado",
+          lambda: ejecutar_operacion("Gestionar equipo alquilado"),
+      ),
+  }
+  mostrar_menu("ALQUILER DE EQUIPOS", opciones)
+
+
+def menu_asesorias():
+  opciones = {
+      "1": ("Agendar Asesoría", lambda: ejecutar_operacion("Agendar Asesoría")),
+      "2": (
+          "Cancelar Asesoría",
+          lambda: ejecutar_operacion("Cancelar Asesoría"),
+      ),
+  }
+  mostrar_menu("ASESORÍAS", opciones)
+
+# Inicio de la aplicación
+
+def main():
+  menu_principal = {
+      "1": ("Registro de clientes", menu_clientes),
+      "2": ("Reservar Sala", menu_salas),
+      "3": ("Alquiler de Equipo", menu_equipos),
+      "4": ("Agendar Asesoría", menu_asesorias),
+  }
+  mostrar_menu(
+      "SOFTWARE FJ - Gestión de Clientes, Servicios y Reservas",
+      menu_principal,
+      es_principal=True,
+  )
+
 #Creación de la clase Cliente con encapsulación y validación de atributos mediante properties.
 
 class Cliente(ABC):
 
     def __init__(self, id_cliente, nombre, email, telefono, tipo="regular"):
+        
         super().__init__(id_cliente)
         self.nombre = nombre; self.email = email; self.telefono = telefono; self.tipo = tipo
         self.validar()
@@ -71,127 +205,6 @@ class Cliente(ABC):
     def descuento_base(self):
         return {"regular":0.0,"premium":0.10,"corporativo":0.15}[self.tipo]
 
-
-##Operación con manejo de excepciones y logging
-
-def operacion(n, titulo, fn=None):
-
-    print(f"\n{'='*60}\nOPERACIÓN {n}: {titulo}")
-
-    """try: return fn()
-
-    except Exception as e:
-
-        logger.error(f"Op {n} - {titulo}: {type(e).__name__}: {e}")
-
-        print(f"  -> Capturada y controlada: {e} | La app SIGUE funcionando.")
-
-        return None"""
-
-##Inicio de la aplicación
-
-def main():
-
-    initialize = input("¿Desea iniciar la aplicación? (s/n): ").strip().lower()
-
-    if initialize != 's':
-        print("Aplicación no iniciada. Sesión finalizada.")
-        return
-
-    print("="*60)
-    print("\nSOFTWARE FJ - Gestión de Clientes, Servicios y Reservas")
-    #print("  Sin BD | POO + Excepciones | Logs en logs/sistema.log") | Comentario generado por IA, se sobreentiende que el programa cumple con estas características.
-    g = GestorSoftwareFJ()
-    
-    # 1-2 Clientes válidos
-    operacion(1,"Registrar cliente válido (premium)")
-    # lambda: g.registrar_cliente(Cliente("C-001","Felipe Jaramillo","felipe@softwarefj.com","3001234567","premium")))
-    
-    operacion(2,"Registrar cliente válido (corporativo)")
-    # lambda: g.registrar_cliente(Cliente("C-002","Ana María Ruiz","ana@empresa.com","3109876543","corporativo")))
-    
-    # 3 Cliente inválido (email)
-    operacion(3,"Registrar cliente INVÁLIDO - email malformado")
-    # lambda: g.registrar_cliente(Cliente("C-003","Juan","juan-mal","123","regular")))
-    
-    # 4 Cliente duplicado
-    
-    operacion(4,"Registrar cliente DUPLICADO")
-    # lambda: g.registrar_cliente(Cliente("C-001","Otro Nombre","felipe@softwarefj.com","3000000000","regular")))
-    
-    # 5-7 Servicios válidos (3 tipos = polimorfismo)
-    
-    operacion(5,"Crear Sala")
-    # lambda: g.agregar_servicio(ReservaSala("S-001","Sala Innovación",80000,capacidad=20,incluye_video_beam=True)))
-    
-    operacion(6,"Crear Alquiler Equipo")
-    # lambda: g.agregar_servicio(AlquilerEquipo("E-001","Portátil Gamer",60000,cantidad_stock=5)))
-    
-    operacion(7,"Crear Asesoría")
-    # lambda: g.agregar_servicio(AsesoriaEspecializada("A-001","Asesoría Python",120000,nivel="experta",consultor="Ing. Felipe")))
-    
-    # 8 Servicio inválido (precio negativo)
-    
-    operacion(8,"Crear servicio INVÁLIDO - precio negativo")
-    # lambda: g.agregar_servicio(ReservaSala("S-999","Sala Mala",-100,capacidad=10)))
-    
-    # 9-12 Reservas
-
-    operacion(9,"Reserva EXITOSA sala (con descuento premium + polimorfismo)")
-    # lambda: g.crear_reserva("C-001","S-001",duracion=3))
-    
-    operacion(10,"Reserva EXITOSA equipo x2 días x2 und.")
-    #lambda: g.crear_reserva("C-002","E-001",duracion=2,cantidad=2))
-    
-    operacion(11,"Reserva FALLIDA - cliente inexistente")
-    #lambda: g.crear_reserva("C-999","S-001",duracion=2))
-    
-    operacion(12,"Reserva FALLIDA - stock insuficiente")
-    # lambda: g.crear_reserva("C-001","E-001",duracion=1,cantidad=99))
-    
-    # 13 Servicio no disponible
-
-    def op13():
-        s=g.buscar_servicio("A-001"); s.disponible=False; return g.crear_reserva("C-001","A-001",duracion=2)
-    
-    operacion(13,"Reserva FALLIDA - servicio no disponible")
-    #, op13)
-    
-    # 14 Sobrecarga: variantes de cálculo
-    def op14():
-        s=g.buscar_servicio("S-001")
-        print(f"  Base 2h: ${s.calcular_costo(2):,.0f} | +19% impuesto: ${s.calcular_costo_con_impuesto(2):,.0f} | -10% desc: ${s.calcular_costo_con_descuento(2, descuento=0.10):,.0f}")
-        try: s.calcular_costo_con_descuento(2, descuento=0.9)
-        except CalculoInconsistenteError as e: print(f"  Descuento 90% rechazado correctamente: {e}")
-    
-    operacion(14,"Métodos SOBRECARGADOS - costo / impuesto / descuento")
-    #, op14)
-    
-    # 15 Cancelar / operación no permitida
-    def op15():
-        r=g.reservas[0]; print(f"  Antes: {r.describir()}"); r.cancelar(); print(f"  Cancelada: {r.describir()}")
-        try: r.cancelar()
-        except OperacionNoPermitidaError as e: print(f"  Doble cancelación bloqueada: {e}")
-    
-    operacion(15,"Cancelar reserva + doble cancelación (operación no permitida)")
-    #, op15)
-    
-    # 16 Encadenamiento explícito
-    def op16():
-        try:
-            try: raise DatoInvalidoError("Duración inválida original")
-            except DatoInvalidoError as e: raise ReservaInvalidaError("No se pudo crear reserva") from e
-        except ReservaInvalidaError as e: print(f"  Encadenamiento: {e} | Causa: {e.__cause__}")
-    
-    operacion(16,"Demostrar encadenamiento de excepciones (raise ... from)")
-    
-    #, op16)
-    
-    print("\n"+"="*60); print("RESUMEN FINAL")#; g.listar()
-    print(f"\nTotal clientes: {len(g.clientes)} | Servicios: {len(g.servicios)} | Reservas: {len(g.reservas)}")
-    print("Revisa logs/sistema.log para el registro completo."); print("="*60)
-
-
 ##Gestor
 
 class GestorSoftwareFJ:
@@ -202,9 +215,11 @@ class GestorSoftwareFJ:
     # Clientes
     
     def registrar_cliente(self, cliente):
+
         try:
             if any(c.id==cliente.id or c.email==cliente.email for c in self.clientes):
                 raise ClienteDuplicadoError(f"Cliente duplicado id/email: {cliente.id}/{cliente.email}")
+            
             self.clientes.append(cliente)
 
         except ErrorSoftwareFJ as e:
@@ -217,6 +232,7 @@ class GestorSoftwareFJ:
         return cliente
     
     def buscar_cliente(self, id_cliente):
+
         for c in self.clientes:
             if c.id==id_cliente: return c
         raise ClienteNoEncontradoError(f"No existe cliente {id_cliente}")
@@ -273,7 +289,6 @@ class Reserva:
     
     def procesar(self):
 
-        """try/except/else/finally + encadenamiento."""
         try:
             self.servicio.verificar_disponibilidad()
             self.servicio.validar_parametros(self.duracion, **self.params)
@@ -312,20 +327,7 @@ class Reserva:
         print("--- SERVICIOS ---"); [print(" ",s.describir()) for s in self.servicios] or print("  (sin servicios)")
         print("--- RESERVAS ---"); [print(" ",r.describir()) for r in self.reservas] or print("  (sin reservas)")
 
-##Logger: registra eventos y errores 
 
-LOG_PATH = os.path.join(os.path.dirname(__file__), "logs", "sistema.log")
-
-os.makedirs(os.path.dirname(LOG_PATH), exist_ok=True)
-
-logging.basicConfig(filename=LOG_PATH, level=logging.INFO,
-    format="%(asctime)s | %(levelname)s | %(message)s", datefmt="%Y-%m-%d %H:%M:%S", encoding="utf-8")
-
-logger = logging.getLogger("SoftwareFJ")
-
-def info(msg): logger.info(msg); print(f"[INFO] {msg}")
-def error(msg): logger.error(msg); print(f"[ERROR] {msg}")
-def advertencia(msg): logger.warning(msg); print(f"[WARN] {msg}")
 
 ##Clases abstracta: toda entidad tiene id y debe validarse/describirse
 
@@ -354,8 +356,11 @@ REVISAR.
 
 class Servicio(ABC):
     def __init__(self, codigo, nombre, precio_base, disponible=True):
+
         if not codigo or not nombre: raise ParametroFaltanteError("Servicio requiere código y nombre.")
+
         if precio_base is None or precio_base < 0: raise DatoInvalidoError("Precio base no puede ser negativo.")
+        
         self.codigo=str(codigo); self.nombre=nombre; self.precio_base=float(precio_base); self.disponible=bool(disponible)
     
     @abstractmethod
@@ -366,6 +371,7 @@ class Servicio(ABC):
     
     @abstractmethod
     def validar_parametros(self, duracion, **kwargs): pass
+
     # --- MÉTODOS SOBRECARGADOS (variantes por parámetros) ---
     
     def calcular_costo_con_impuesto(self, duracion=1, impuesto=0.19, **kwargs):
@@ -440,4 +446,7 @@ class AsesoriaEspecializada(Servicio):
     
     def describir(self): return f"Asesoría[{self.codigo}] {self.nombre} | Nivel:{self.nivel} | Consultor:{self.consultor} | ${self.precio_base:,.0f}/h base"
 
-main()
+
+
+if __name__ == "__main__":
+  main()
