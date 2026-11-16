@@ -1,9 +1,8 @@
 """
 from entidades import Cliente
 from servicios import ReservaSala, AlquilerEquipo, AsesoriaEspecializada
+from reservas import Reserva
 from gestor import GestorSoftwareFJ
-import logger
-from excepciones import *
 
 Los modulos en este comentario previamente se importaban de librerias personalizadas, pero fueron incorporados a este codigo
 """
@@ -12,13 +11,13 @@ Los modulos en este comentario previamente se importaban de librerias personaliz
 import logging, os
 from abc import ABC, abstractmethod
 from enum import Enum
+import re
+
 from excepciones import *
 
-#Inicio
+#Creación de la clase Cliente con encapsulación y validación de atributos mediante properties.
 
 class Cliente(ABC):
-
-##Encapsulación: atributos con properties validadas.
 
     def __init__(self, id_cliente, nombre, email, telefono, tipo="regular"):
         super().__init__(id_cliente)
@@ -75,11 +74,11 @@ class Cliente(ABC):
 
 ##Operación con manejo de excepciones y logging
 
-def operacion(n, titulo, fn):
+def operacion(n, titulo, fn=None):
 
     print(f"\n{'='*60}\nOPERACIÓN {n}: {titulo}")
 
-    try: return fn()
+    """try: return fn()
 
     except Exception as e:
 
@@ -87,11 +86,17 @@ def operacion(n, titulo, fn):
 
         print(f"  -> Capturada y controlada: {e} | La app SIGUE funcionando.")
 
-        return None
+        return None"""
 
 ##Inicio de la aplicación
 
 def main():
+
+    initialize = input("¿Desea iniciar la aplicación? (s/n): ").strip().lower()
+
+    if initialize != 's':
+        print("Aplicación no iniciada. Sesión finalizada.")
+        return
 
     print("="*60)
     print("\nSOFTWARE FJ - Gestión de Clientes, Servicios y Reservas")
@@ -99,45 +104,58 @@ def main():
     g = GestorSoftwareFJ()
     
     # 1-2 Clientes válidos
-    operacion(1,"Registrar cliente válido (premium)", lambda: g.registrar_cliente(Cliente("C-001","Felipe Jaramillo","felipe@softwarefj.com","3001234567","premium")))
+    operacion(1,"Registrar cliente válido (premium)")
+    # lambda: g.registrar_cliente(Cliente("C-001","Felipe Jaramillo","felipe@softwarefj.com","3001234567","premium")))
     
-    operacion(2,"Registrar cliente válido (corporativo)", lambda: g.registrar_cliente(Cliente("C-002","Ana María Ruiz","ana@empresa.com","3109876543","corporativo")))
+    operacion(2,"Registrar cliente válido (corporativo)")
+    # lambda: g.registrar_cliente(Cliente("C-002","Ana María Ruiz","ana@empresa.com","3109876543","corporativo")))
     
     # 3 Cliente inválido (email)
-    operacion(3,"Registrar cliente INVÁLIDO - email malformado", lambda: g.registrar_cliente(Cliente("C-003","Juan","juan-mal","123","regular")))
+    operacion(3,"Registrar cliente INVÁLIDO - email malformado")
+    # lambda: g.registrar_cliente(Cliente("C-003","Juan","juan-mal","123","regular")))
     
     # 4 Cliente duplicado
     
-    operacion(4,"Registrar cliente DUPLICADO", lambda: g.registrar_cliente(Cliente("C-001","Otro Nombre","felipe@softwarefj.com","3000000000","regular")))
+    operacion(4,"Registrar cliente DUPLICADO")
+    # lambda: g.registrar_cliente(Cliente("C-001","Otro Nombre","felipe@softwarefj.com","3000000000","regular")))
     
     # 5-7 Servicios válidos (3 tipos = polimorfismo)
     
-    operacion(5,"Crear Sala", lambda: g.agregar_servicio(ReservaSala("S-001","Sala Innovación",80000,capacidad=20,incluye_video_beam=True)))
+    operacion(5,"Crear Sala")
+    # lambda: g.agregar_servicio(ReservaSala("S-001","Sala Innovación",80000,capacidad=20,incluye_video_beam=True)))
     
-    operacion(6,"Crear Alquiler Equipo", lambda: g.agregar_servicio(AlquilerEquipo("E-001","Portátil Gamer",60000,cantidad_stock=5)))
+    operacion(6,"Crear Alquiler Equipo")
+    # lambda: g.agregar_servicio(AlquilerEquipo("E-001","Portátil Gamer",60000,cantidad_stock=5)))
     
-    operacion(7,"Crear Asesoría", lambda: g.agregar_servicio(AsesoriaEspecializada("A-001","Asesoría Python",120000,nivel="experta",consultor="Ing. Felipe")))
+    operacion(7,"Crear Asesoría")
+    # lambda: g.agregar_servicio(AsesoriaEspecializada("A-001","Asesoría Python",120000,nivel="experta",consultor="Ing. Felipe")))
     
     # 8 Servicio inválido (precio negativo)
     
-    operacion(8,"Crear servicio INVÁLIDO - precio negativo", lambda: g.agregar_servicio(ReservaSala("S-999","Sala Mala",-100,capacidad=10)))
+    operacion(8,"Crear servicio INVÁLIDO - precio negativo")
+    # lambda: g.agregar_servicio(ReservaSala("S-999","Sala Mala",-100,capacidad=10)))
     
     # 9-12 Reservas
 
-    operacion(9,"Reserva EXITOSA sala (con descuento premium + polimorfismo)", lambda: g.crear_reserva("C-001","S-001",duracion=3))
+    operacion(9,"Reserva EXITOSA sala (con descuento premium + polimorfismo)")
+    # lambda: g.crear_reserva("C-001","S-001",duracion=3))
     
-    operacion(10,"Reserva EXITOSA equipo x2 días x2 und.", lambda: g.crear_reserva("C-002","E-001",duracion=2,cantidad=2))
+    operacion(10,"Reserva EXITOSA equipo x2 días x2 und.")
+    #lambda: g.crear_reserva("C-002","E-001",duracion=2,cantidad=2))
     
-    operacion(11,"Reserva FALLIDA - cliente inexistente", lambda: g.crear_reserva("C-999","S-001",duracion=2))
+    operacion(11,"Reserva FALLIDA - cliente inexistente")
+    #lambda: g.crear_reserva("C-999","S-001",duracion=2))
     
-    operacion(12,"Reserva FALLIDA - stock insuficiente", lambda: g.crear_reserva("C-001","E-001",duracion=1,cantidad=99))
+    operacion(12,"Reserva FALLIDA - stock insuficiente")
+    # lambda: g.crear_reserva("C-001","E-001",duracion=1,cantidad=99))
     
     # 13 Servicio no disponible
 
     def op13():
         s=g.buscar_servicio("A-001"); s.disponible=False; return g.crear_reserva("C-001","A-001",duracion=2)
     
-    operacion(13,"Reserva FALLIDA - servicio no disponible", op13)
+    operacion(13,"Reserva FALLIDA - servicio no disponible")
+    #, op13)
     
     # 14 Sobrecarga: variantes de cálculo
     def op14():
@@ -146,7 +164,8 @@ def main():
         try: s.calcular_costo_con_descuento(2, descuento=0.9)
         except CalculoInconsistenteError as e: print(f"  Descuento 90% rechazado correctamente: {e}")
     
-    operacion(14,"Métodos SOBRECARGADOS - costo / impuesto / descuento", op14)
+    operacion(14,"Métodos SOBRECARGADOS - costo / impuesto / descuento")
+    #, op14)
     
     # 15 Cancelar / operación no permitida
     def op15():
@@ -154,7 +173,8 @@ def main():
         try: r.cancelar()
         except OperacionNoPermitidaError as e: print(f"  Doble cancelación bloqueada: {e}")
     
-    operacion(15,"Cancelar reserva + doble cancelación (operación no permitida)", op15)
+    operacion(15,"Cancelar reserva + doble cancelación (operación no permitida)")
+    #, op15)
     
     # 16 Encadenamiento explícito
     def op16():
@@ -163,11 +183,14 @@ def main():
             except DatoInvalidoError as e: raise ReservaInvalidaError("No se pudo crear reserva") from e
         except ReservaInvalidaError as e: print(f"  Encadenamiento: {e} | Causa: {e.__cause__}")
     
-    operacion(16,"Demostrar encadenamiento de excepciones (raise ... from)", op16)
+    operacion(16,"Demostrar encadenamiento de excepciones (raise ... from)")
     
-    print("\n"+"="*60); print("RESUMEN FINAL"); g.listar()
+    #, op16)
+    
+    print("\n"+"="*60); print("RESUMEN FINAL")#; g.listar()
     print(f"\nTotal clientes: {len(g.clientes)} | Servicios: {len(g.servicios)} | Reservas: {len(g.reservas)}")
     print("Revisa logs/sistema.log para el registro completo."); print("="*60)
+
 
 ##Gestor
 
@@ -183,10 +206,14 @@ class GestorSoftwareFJ:
             if any(c.id==cliente.id or c.email==cliente.email for c in self.clientes):
                 raise ClienteDuplicadoError(f"Cliente duplicado id/email: {cliente.id}/{cliente.email}")
             self.clientes.append(cliente)
+
         except ErrorSoftwareFJ as e:
             logger.error(f"Registrar cliente: {e}"); raise
+        
         else: logger.info(f"Cliente registrado: {cliente.describir()}")
+
         finally: logger.info("Intento de registro de cliente finalizado.")
+
         return cliente
     
     def buscar_cliente(self, id_cliente):
@@ -213,7 +240,7 @@ class GestorSoftwareFJ:
         
         try:
             cliente=self.buscar_cliente(id_cliente); servicio=self.buscar_servicio(codigo_servicio)
-            from reservas import Reserva
+
             r=Reserva(cliente, servicio, duracion, **params); total=r.procesar(); self.reservas.append(r)
        
         except ErrorSoftwareFJ as e:
@@ -413,6 +440,4 @@ class AsesoriaEspecializada(Servicio):
     
     def describir(self): return f"Asesoría[{self.codigo}] {self.nombre} | Nivel:{self.nivel} | Consultor:{self.consultor} | ${self.precio_base:,.0f}/h base"
 
-main()    
-
-
+main()
