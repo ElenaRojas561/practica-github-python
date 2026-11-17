@@ -35,11 +35,6 @@ def advertencia(msg):
 
 #Creación de la clase Cliente con encapsulación y validación de atributos mediante properties.
 
-from abc import ABC, abstractmethod
-from excepciones import *
-import re
-
-
 class Cliente(ABC):
 
     def __init__(self, id_cliente, nombre, email, telefono, tipo="regular"):
