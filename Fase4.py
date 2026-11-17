@@ -7,7 +7,6 @@ from gestor import GestorSoftwareFJ
 Los modulos en este comentario previamente se importaban de librerias personalizadas, pero fueron incorporados a este codigo
 """
 
-
 import logging, os
 from abc import ABC, abstractmethod
 from enum import Enum
@@ -16,8 +15,6 @@ import re
 from excepciones import *
 
 # Configuración básica de logging
-
-##Logger: registra eventos y errores 
 
 LOG_PATH = os.path.join(os.path.dirname(__file__), "logs", "sistema.log")
 
@@ -34,6 +31,76 @@ def error(msg):
     logger.error(msg); print(f"[ERROR] {msg}")
 def advertencia(msg): 
     logger.warning(msg); print(f"[WARN] {msg}")
+
+
+#Creación de la clase Cliente con encapsulación y validación de atributos mediante properties.
+
+from abc import ABC, abstractmethod
+from excepciones import *
+import re
+
+
+class Cliente(ABC):
+
+    def __init__(self, id_cliente, nombre, email, telefono, tipo="regular"):
+
+        self.id_cliente = id_cliente
+        self.nombre = nombre
+        self.email = email
+        self.telefono = telefono
+        self.tipo = tipo
+    
+    @property
+    def nombre(self): 
+        return self._nombre
+    
+    @nombre.setter
+
+    def nombre(self, v):
+
+        nombre_formateado = str(v or "").strip()
+        if len(nombre_formateado) < 3: raise DatoInvalido("Por favor digite el nombre y apellido del usuario")
+        if not re.match(r"^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$", nombre_formateado):
+            raise DatoInvalido("El nombre solo puede contener letras y espacios.")
+        self._nombre = nombre_formateado.title()
+    
+    @property
+    def email(self): 
+        return self._email
+    
+    @email.setter
+    
+    def email(self, v):
+        if not v or not re.match(r"^[\w\.-]+@[\w\.-]+\.\w+$", str(v)):
+            raise DatoInvalido(f"Email inválido: {v}")
+        self.email = str(v).lower()
+    
+    @property
+    def telefono(self): return self._telefono
+    
+    @telefono.setter
+
+    def telefono(self, v):
+        d = re.sub(r"\D", "", str(v or ""))
+        if len(d) < 7: raise DatoInvalido("Teléfono debe tener 7 dígitos.")
+        self.telefono = d
+    
+    @property
+    def tipo(self): return self._tipo
+    
+    @tipo.setter
+    def tipo(self, v):
+        v = str(v or "regular").lower()
+        if v not in ("regular","premium","corporativo"): raise DatoInvalido("El tipo de usuario debe ser: regular, premium o corporativo.")
+        self.tipo = v
+    
+    
+    def describir(self):
+        return f"Cliente[{self.id_cliente}] {self.nombre} | {self.email} | {self.telefono} | {self.tipo.capitalize()}"
+    
+    #def descuento_base(self):
+        #return {"regular":0.0,"premium":0.10,"corporativo":0.15}[self.tipo]
+
 
 def ejecutar_operacion(titulo, fn=None):
   
@@ -148,64 +215,8 @@ def main():
       es_principal=True,
   )
 
-#Creación de la clase Cliente con encapsulación y validación de atributos mediante properties.
-
-class Cliente(ABC):
-
-    def __init__(self, id_cliente, nombre, email, telefono, tipo="regular"):
-        
-        super().__init__(id_cliente)
-        self.nombre = nombre; self.email = email; self.telefono = telefono; self.tipo = tipo
-        self.validar()
-    
-    @property
-    def nombre(self): return self._nombre
-    
-    @nombre.setter
-    def nombre(self, v):
-        if not v or len(str(v).strip()) < 3: raise DatoInvalidoError("Nombre debe tener >=3 caracteres.")
-        self._nombre = str(v).strip().title()
-    
-    @property
-    def email(self): return self._email
-    
-    @email.setter
-    def email(self, v):
-        if not v or not re.match(r"^[\w\.-]+@[\w\.-]+\.\w+$", str(v)):
-            raise DatoInvalidoError(f"Email inválido: {v}")
-        self._email = str(v).lower()
-    
-    @property
-    def telefono(self): return self._telefono
-    
-    @telefono.setter
-
-    def telefono(self, v):
-
-        d = re.sub(r"\D", "", str(v or ""))
-        if len(d) < 7: raise DatoInvalidoError("Teléfono debe tener >=7 dígitos.")
-        self._telefono = d
-    
-    @property
-    def tipo(self): return self._tipo
-    
-    @tipo.setter
-    def tipo(self, v):
-        v = str(v or "regular").lower()
-        if v not in ("regular","premium","corporativo"): raise DatoInvalidoError("Tipo debe ser regular/premium/corporativo.")
-        self._tipo = v
-    
-    def validar(self):
-        # Re-valida vía setters
-        self.nombre=self._nombre; self.email=self._email; self.telefono=self._telefono; self.tipo=self._tipo
-    
-    def describir(self):
-        return f"Cliente[{self.id}] {self.nombre} | {self.email} | {self.telefono} | {self.tipo}"
-    
-    def descuento_base(self):
-        return {"regular":0.0,"premium":0.10,"corporativo":0.15}[self.tipo]
-
 ##Gestor
+
 
 class GestorSoftwareFJ:
 
@@ -240,7 +251,7 @@ class GestorSoftwareFJ:
     # Servicios
     def agregar_servicio(self, servicio):
         try:
-            if any(s.codigo==servicio.codigo for s in self.servicios): raise DatoInvalidoError(f"Código duplicado {servicio.codigo}")
+            if any(s.codigo==servicio.codigo for s in self.servicios): raise DatoInvalido(f"Código duplicado {servicio.codigo}")
             self.servicios.append(servicio)
         except ErrorSoftwareFJ as e: logger.error(f"Agregar servicio: {e}"); raise
         else: logger.info(f"Servicio agregado: {servicio.describir()}")
@@ -267,7 +278,11 @@ class GestorSoftwareFJ:
         
         finally: logger.info("Intento de reserva finalizado.")
 
+
+
 ##Estados de la reserva
+
+
 
 class EstadoReserva(Enum): 
 
@@ -328,12 +343,13 @@ class Reserva:
         print("--- RESERVAS ---"); [print(" ",r.describir()) for r in self.reservas] or print("  (sin reservas)")
 
 
-
+            
 ##Clases abstracta: toda entidad tiene id y debe validarse/describirse
 
-"""if __name__=="__main__": main()"""
 
-"""def __init__(self, id_entidad):
+if __name__=="__main__": main()
+
+def __init__(self, id_entidad):
         if not id_entidad: raise ParametroFaltanteError("El id es obligatorio.")
         self._id = str(id_entidad)
     
@@ -348,18 +364,17 @@ def describir(self) -> str: pass
     
 def __str__(self): return self.describir()
 
-REVISAR.
-
-"""
 
 ##Servicio abstracto + 3 servicios especializados. Polimorfismo + sobrecarga simulada.
+
+
 
 class Servicio(ABC):
     def __init__(self, codigo, nombre, precio_base, disponible=True):
 
         if not codigo or not nombre: raise ParametroFaltanteError("Servicio requiere código y nombre.")
 
-        if precio_base is None or precio_base < 0: raise DatoInvalidoError("Precio base no puede ser negativo.")
+        if precio_base is None or precio_base < 0: raise DatoInvalido("Precio base no puede ser negativo.")
         
         self.codigo=str(codigo); self.nombre=nombre; self.precio_base=float(precio_base); self.disponible=bool(disponible)
     
@@ -396,6 +411,8 @@ class Servicio(ABC):
         if not self.disponible: raise ServicioNoDisponibleError(f"Servicio {self.codigo} - {self.nombre} no disponible.")
         return True
 
+
+
 class ReservaSala(Servicio):
     
     def __init__(self, codigo, nombre, precio_base, capacidad, incluye_video_beam=False, **kw):
@@ -404,7 +421,7 @@ class ReservaSala(Servicio):
     def validar_parametros(self, duracion, **kw):
         if duracion is None or duracion<=0: raise ReservaInvalidaError("Duración de sala debe ser >0 horas.")
         cap=kw.get("capacidad", getattr(self,"capacidad",0))
-        if cap<=0 or cap>200: raise DatoInvalidoError("Capacidad debe ser 1-200.")
+        if cap<=0 or cap>200: raise DatoInvalido("Capacidad debe ser 1-200.")
     
     def calcular_costo(self, duracion=1, **kw):
         self.validar_parametros(duracion, capacidad=self.capacidad)
@@ -412,6 +429,8 @@ class ReservaSala(Servicio):
         return round((self.precio_base*duracion)+extra,2)
     
     def describir(self): return f"Sala[{self.codigo}] {self.nombre} | Cap:{self.capacidad} | Beam:{'Sí' if self.incluye_video_beam else 'No'} | ${self.precio_base:,.0f}/h"
+
+
 
 class AlquilerEquipo(Servicio):
     
@@ -429,6 +448,8 @@ class AlquilerEquipo(Servicio):
     
     def describir(self): return f"Equipo[{self.codigo}] {self.nombre} | Stock:{self.cantidad_stock} | ${self.precio_base:,.0f}/día"
 
+
+
 class AsesoriaEspecializada(Servicio):
 
     NIVELES={"basica":1.0,"avanzada":1.5,"experta":2.0}
@@ -445,6 +466,7 @@ class AsesoriaEspecializada(Servicio):
         return round(self.precio_base*duracion*self.NIVELES[self.nivel],2)
     
     def describir(self): return f"Asesoría[{self.codigo}] {self.nombre} | Nivel:{self.nivel} | Consultor:{self.consultor} | ${self.precio_base:,.0f}/h base"
+
 
 
 
