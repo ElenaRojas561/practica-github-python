@@ -190,9 +190,9 @@ class AsesoriaEspecializada(Servicio):
     def describir(self): 
         return f"Asesoría[{self.codigo}] {self.nombre} | Nivel:{self.nivel} | Consultor:{self.consultor} | ${self.precio_base:,.0f}/h base"
 
-# ==========================================
-# 4. ESTADOS Y GESTIÓN DE RESERVAS
-# ==========================================
+
+# EStado y Gestión de reservas
+
 class EstadoReserva(Enum): 
     PENDIENTE = "Pendiente"
     CONFIRMADA = "Confirmada"
@@ -315,9 +315,9 @@ class GestorSoftwareFJ:
         print("\n--- RESERVAS ---")
         [print(" ", r.describir()) for r in self.reservas] or print("  (sin reservas)")
 
-# ==========================================
-# 5. INTERFAZ INTERACTIVA (MENÚS DE CONSOLA)
-# ==========================================
+
+# MENÚS DE CONSOLA
+
 gestor_global = GestorSoftwareFJ()
 
 # Precargar datos de prueba útiles para que el menú interactivo funcione de inmediato
@@ -361,7 +361,7 @@ def mostrar_menu(titulo, opciones, es_principal=False):
         else:
             print("\n[!] Opción no válida. Intenta nuevamente.")
 
-# Funciones de acciones interactivas para los menús
+# Funciones de acciones interactivas 
 def ui_registrar_cliente():
     id_c = input("ID del cliente (ej. C-003): ").strip()
     nombre = input("Nombre completo: ").strip()
