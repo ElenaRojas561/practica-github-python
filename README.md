@@ -21,6 +21,29 @@ Ciclo de Vida de Reservas: Integración de instancias de Cliente y Servicio, apl
 
 Tolerancia a Fallos y Auditoría: Captura controlada de excepciones personalizadas sin interrumpir la ejecución del programa, registrando cada evento y traza de error en el archivo sistema.log.
 
+## Ejecución y casos de prueba
+
+Requisitos: Python 3.10 o superior. No se requieren librerías externas.
+
+Modo interactivo (menú de consola):
+
+```
+python Fase4.py
+```
+
+Simulación automática de operaciones (Anexo 3 y feedback del tutor):
+
+```
+python simulacion.py
+```
+
+El módulo `simulacion.py` ejecuta 15 operaciones completas reutilizando las clases del sistema, entre ellas los dos casos de prueba solicitados por el tutor:
+
+- Caso con datos válidos: registro del cliente `C-101` con nombre, email y teléfono correctos (operación exitosa).
+- Caso con entrada incorrecta: registro de un cliente con email sin formato válido; la excepción personalizada `DatoInvalidoError` muestra un mensaje claro y el programa continúa de forma controlada.
+
+Además se prueban: clientes duplicados, servicios con precio negativo, niveles de asesoría inexistentes, reservas con cliente inexistente, stock insuficiente, duración no numérica (encadenamiento `ValueError` → `DatoInvalidoError`), cancelación doble de una reserva (operación no permitida) y el cálculo sobrecargado de costos con impuesto. Todos los eventos y errores quedan registrados en `logs/sistema.log`.
+
 ## Autores
 
 Equipo de Desarrollo — Grupo [Número de Grupo]
@@ -28,3 +51,5 @@ Equipo de Desarrollo — Grupo [Número de Grupo]
 Elena Rojas
 
 Samuel Gómez Rendón
+
+Crispin Daza
