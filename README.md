@@ -34,7 +34,7 @@ python Fase4.py
 Simulación automática de operaciones (Anexo 3 y feedback del tutor):
 
 ```
-python simulacion.py
+python Prácticas Simuladas - Grupo 213023_117.py
 ```
 
 El módulo `simulacion.py` ejecuta 15 operaciones completas reutilizando las clases del sistema, entre ellas los dos casos de prueba solicitados por el tutor:
