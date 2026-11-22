@@ -51,3 +51,5 @@ Equipo de Desarrollo — Grupo [Número de Grupo]
 Elena Rojas
 
 Samuel Gómez Rendón
+
+Crispin Daza
