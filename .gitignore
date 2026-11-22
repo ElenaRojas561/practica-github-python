@@ -1,0 +1,4 @@
+# Archivos generados en ejecución (no hacen parte del código fuente)
+logs/
+__pycache__/
+*.pyc
