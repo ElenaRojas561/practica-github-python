@@ -3,7 +3,7 @@
 Aplicación desarrollada en Python bajo el paradigma de Programación Orientada a Objetos (POO) para la gestión operativa de Software FJ, sin el uso de motores de bases de datos externos.
 Toda la persistencia operativa se gestiona en memoria mediante estructuras internas y objetos referenciados, complementada con un sistema de auditoría y registro de eventos en archivo plano (logs).
 
-Contexto Académico: Universidad Nacional Abierta y a Distancia (UNAD) — Escuela de Ciencias Básicas, Tecnología e Ingeniería (ECBTI) | Programa: Ingeniería de Sistemas | Curso: Programación (Código: 213023) — Fase 4.
+Contexto Académico: Universidad Nacional Abierta y a Distancia (UNAD) — Escuela de Ciencias Básicas, Tecnología e Ingeniería (ECBTI) | Programa: Ingeniería de Sistemas | Curso: Programación (Código: 213023)  — Fase 4.
 
 ## Características Principales
 
@@ -46,7 +46,7 @@ Además se prueban: clientes duplicados, servicios con precio negativo, niveles 
 
 ## Autores
 
-Equipo de Desarrollo — Grupo [Número de Grupo]
+Equipo de Desarrollo — Grupo 117
 
 Elena Rojas
 
